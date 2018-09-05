@@ -43,7 +43,46 @@ module.exports = {
             res.status(500).send(err)
         }
     },
-    async getUserProfile(req, res) {
+    async login(req, res, next) {
+        passport.authenticate('local', function (err, user, info) {
+            if (err) return next(err)
+
+            if (!user) {
+                return res.send({
+                    redirect: 'login',
+                    msg: info.message
+                })
+            }
+
+            const id = user.dataValues.id
+            req.logIn(id, function (err) {
+                if (err) return next(err)
+
+                return res.send({
+                    userId: req.user,
+                    isAuthenticated: req.isAuthenticated(),
+                    redirect: 'profile'
+                })
+            })
+        })(req, res, next)
+    },
+    async checkEmailNotTaken(req, res) {
+        try {
+            const user = await Users.findOne({ where: { email: req.query.email } })
+            res.send(user ? true : false)
+        } catch (err) {
+            res.status(500).send(err)
+        }
+    },
+    async checkUsernameNotTaken(req, res) {
+        try {
+            const user = await Users.findOne({ where: { name: req.query.username } })
+            res.send(user ? true : false)
+        } catch (err) {
+            res.status(500).send(err)
+        }
+    },
+    getUserProfile(req, res) {
         try {
             console.log('profile req user: ', req.user)
             console.log('profile req is auth: ', req.isAuthenticated())
@@ -51,6 +90,14 @@ module.exports = {
             // const user = await Users.findById(id)
 
             res.send(req.user)
+        } catch (err) {
+            res.status(500).send(err)
+        }
+    },
+    getLoginStatus(req, res) {
+        try {
+            const isLoggedIn = req.user ? true : false
+            res.send(isLoggedIn)
         } catch (err) {
             res.status(500).send(err)
         }
