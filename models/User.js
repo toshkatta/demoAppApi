@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs')
-const salt = bcrypt.genSaltSync(10)
+const passwordSalt = bcrypt.genSaltSync(10)
 
 module.exports = (sequelize, DataTypes) => {
     const User = sequelize.define('Users', {
@@ -59,15 +59,20 @@ module.exports = (sequelize, DataTypes) => {
                     msg: 'Password must contain at least one number, uppercase and lowercase letter.'
                 }
             }
+        },
+        avatar: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'images/default.jpg'
         }
     }, {
             hooks: {
                 afterValidate: function (user) {
-                    const hash = bcrypt.hashSync(user.password, salt);
-                    user.password = hash
+                    const passwordHash = bcrypt.hashSync(user.password, passwordSalt)
+                    user.password = passwordHash
                 }
             }
         })
 
-    return User;
+    return User
 }

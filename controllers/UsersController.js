@@ -5,6 +5,9 @@ const Sequelize = require('sequelize')
 const Op = Sequelize.Op
 const passport = require('passport')
 
+const fs = require('fs')
+const gm = require('gm')
+
 module.exports = {
     async createUser(req, res) {
         try {
@@ -33,7 +36,7 @@ module.exports = {
                     if (err) throw err
 
                     res.send({
-                        userId: req.user,
+                        user: req.user,
                         isAuthenticated: req.isAuthenticated(),
                         redirect: 'profile'
                     })
@@ -42,6 +45,85 @@ module.exports = {
         } catch (err) {
             res.status(500).send(err)
         }
+    },
+    async updateUser(req, res) {
+        try {
+            if (!req.user) {
+                throw { login: 'Please login first' }
+            }
+
+            let username = await userValidator.validateUsername(req.body.name)
+            let email = await userValidator.validateEmail(req.body.email)
+            let updateFields = ['name', 'email']
+
+            let error = {
+                username: username.error ? username.msg : null,
+                email: email.error ? email.msg : null
+            }
+
+            let validUser = {
+                name: username.cleanUsername,
+                email: email.cleanEmail
+            }
+
+            if (!validUser.name) {
+                let index = updateFields.indexOf('name')
+                if (index > -1) {
+                    updateFields.splice(index, 1)
+                }
+            }
+
+            if (!validUser.email) {
+                let index = updateFields.indexOf('email')
+                if (index > -1) {
+                    updateFields.splice(index, 1)
+                }
+            }
+
+            if ((error.username && updateFields.indexOf('name') > -1) || (error.email && updateFields.indexOf('email') > -1)) {
+                throw error
+            }
+
+            const user = await Users.findById(req.user.id)
+            const update = await user.update({ 'name': validUser.name, 'email': validUser.email }, { fields: updateFields })
+
+            res.send({
+                update: update
+            })
+
+        } catch (err) {
+            res.status(500).send(err)
+        }
+    },
+    async updatePassword(req, res) {
+        try {
+            if (!req.user) {
+                throw { login: 'Please login first' }
+            }
+
+            const password = await userValidator.validatePassword(req.body.password)
+            const error = {
+                password: password.error ? password.msg : null
+            }
+            const validUser = {
+                password: password.cleanPassword
+            }
+
+            if (error.password) {
+                throw error
+            }
+
+            const user = await Users.findById(req.user.id)
+            const update = await user.update({ 'password': validUser.password }, { fields: ['password'] })
+
+            res.send({
+                update: update
+            })
+
+        } catch (err) {
+            res.status(500).send(err)
+        }
+
     },
     async login(req, res, next) {
         passport.authenticate('local', function (err, user, info) {
@@ -59,12 +141,20 @@ module.exports = {
                 if (err) return next(err)
 
                 return res.send({
-                    userId: req.user,
+                    user: req.user,
                     isAuthenticated: req.isAuthenticated(),
                     redirect: 'profile'
                 })
             })
         })(req, res, next)
+    },
+    async logout(req, res) {
+        if (!req.user) {
+            throw { login: 'Please login first' }
+        }
+
+        await req.logout()
+        res.redirect('/redirect?link=')
     },
     async checkEmailNotTaken(req, res) {
         try {
@@ -82,12 +172,44 @@ module.exports = {
             res.status(500).send(err)
         }
     },
+    async uploadAvatar(req, res) {
+        try {
+            if (!req.user) {
+                throw { login: 'Please login first' }
+            }
+
+            const user = await Users.findById(req.user.id)
+            const userAvatarPath = 'uploads\\' + user.dataValues.avatar
+
+            gm(req.file.path)
+                .resize(400, 400)
+                .noProfile()
+                .write(req.file.path, function (err) {
+                    if (err) console.log('GM error: ', err);
+                });
+
+            const path = req.file.path.split('uploads\\').pop()
+            const oldAvatar = 'uploads/' + user.dataValues.avatar
+            fs.unlink(oldAvatar, (err) => {
+                if (err) throw err
+            })
+
+            const update = await user.update({ 'avatar': path }, { fields: ['avatar'] })
+            res.send({
+                update: update
+            })
+        } catch (err) {
+            res.status(500).send(err)
+        }
+    },
     getUserProfile(req, res) {
         try {
-            console.log('profile req user: ', req.user)
-            console.log('profile req is auth: ', req.isAuthenticated())
+            if (!req.user) {
+                throw { login: 'Please login first' }
+            }
+
             // const id = req.user.id
-            // const user = await Users.findById(id)
+            // const user = await Users.(req.user.id)(id)
 
             res.send(req.user)
         } catch (err) {
@@ -115,7 +237,8 @@ passport.deserializeUser(async function (id, done) {
         const cleanUser = {
             id: user.dataValues.id,
             name: user.dataValues.name,
-            email: user.dataValues.email
+            email: user.dataValues.email,
+            avatar: user.dataValues.avatar
         }
 
         done(null, cleanUser)
