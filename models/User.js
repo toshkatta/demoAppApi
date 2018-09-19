@@ -2,11 +2,12 @@ const bcrypt = require('bcryptjs')
 const passwordSalt = bcrypt.genSaltSync(10)
 
 module.exports = (sequelize, DataTypes) => {
-    const User = sequelize.define('Users', {
+    const User = sequelize.define('user', {
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
-            autoIncrement: true
+            autoIncrement: true,
+            allowNull: false
         },
         name: {
             type: DataTypes.STRING,
@@ -63,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
         avatar: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: 'images/default.jpg'
+            defaultValue: 'avatars/default.jpg'
         }
     }, {
             hooks: {

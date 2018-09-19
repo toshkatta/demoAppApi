@@ -1,4 +1,4 @@
-const { Users } = require('./models')
+const Users = require('./models').user
 
 const clearWhitespace = (input) => {
     input = input.trim()

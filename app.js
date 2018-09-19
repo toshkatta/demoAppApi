@@ -12,7 +12,8 @@ const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 const SequelizeStore = require('connect-session-sequelize')(session.Store)
 
-const { Users } = require('./models')
+const Users = require('./models').user
+
 const bcrypt = require('bcryptjs')
 
 require('dotenv').config()
@@ -41,7 +42,7 @@ app.use(passport.session())
 
 app.use(cors({
     origin: [
-        'http://localhost:4200'
+        'http://' + config.db.options.host + ':' + config.fe_port
     ], credentials: true
 }))
 
@@ -82,6 +83,7 @@ sequelize
     })
 
 sequelize.sync({
+    // force: true,
     logging: console.log
 })
     .then(() => {

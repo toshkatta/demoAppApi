@@ -1,4 +1,4 @@
-const { Users } = require('../models')
+const Users = require('../models').user
 const userValidator = require('../userValidator')
 
 const Sequelize = require('sequelize')
@@ -158,7 +158,7 @@ module.exports = {
     },
     async checkEmailNotTaken(req, res) {
         try {
-            const user = await Users.findOne({ where: { email: req.query.email } })
+            const user = await Users.findOne({ where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('email')), sequelize.fn('lower', req.query.emial)) })
             res.send(user ? true : false)
         } catch (err) {
             res.status(500).send(err)
@@ -166,7 +166,7 @@ module.exports = {
     },
     async checkUsernameNotTaken(req, res) {
         try {
-            const user = await Users.findOne({ where: { name: req.query.username } })
+            const user = await Users.findOne({ where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('username')), sequelize.fn('lower', req.query.username)) })
             res.send(user ? true : false)
         } catch (err) {
             res.status(500).send(err)
@@ -179,24 +179,27 @@ module.exports = {
             }
 
             const user = await Users.findById(req.user.id)
-            const userAvatarPath = 'uploads\\' + user.dataValues.avatar
+            // const userAvatarPath = 'uploads\\' + user.dataValues.avatar
 
             gm(req.file.path)
                 .resize(400, 400)
                 .noProfile()
                 .write(req.file.path, function (err) {
-                    if (err) console.log('GM error: ', err);
-                });
+                    if (err) console.log('GM error: ', err)
+                })
 
             const path = req.file.path.split('uploads\\').pop()
             const oldAvatar = 'uploads/' + user.dataValues.avatar
-            fs.unlink(oldAvatar, (err) => {
-                if (err) throw err
-            })
+
+            if (oldAvatar !== 'uploads/avatars/default.jpg') {
+                fs.unlink(oldAvatar, (err) => {
+                    if (err) throw err
+                })
+            }
 
             const update = await user.update({ 'avatar': path }, { fields: ['avatar'] })
             res.send({
-                update: update
+                'update': update
             })
         } catch (err) {
             res.status(500).send(err)
