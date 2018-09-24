@@ -20,11 +20,6 @@ module.exports = (sequelize, DataTypes) => {
                     msg: 'Sneaker name cannot be empty.'
                 }
             }
-        },
-        images: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            defaultValue: 'sneakers/default.jpg'
         }
     }, {})
 
@@ -33,6 +28,7 @@ module.exports = (sequelize, DataTypes) => {
         Sneaker.belongsTo(models.gender, { foreignKey: 'genderId', allowNull: false })
         Sneaker.belongsTo(models.type, { foreignKey: 'typeId', allowNull: false })
         Sneaker.belongsToMany(models.size, { through: 'sneaker_sizes' })
+        Sneaker.hasMany(models.sneakerImage)
     }
 
     return Sneaker

@@ -158,17 +158,19 @@ module.exports = {
     },
     async checkEmailNotTaken(req, res) {
         try {
-            const user = await Users.findOne({ where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('email')), sequelize.fn('lower', req.query.emial)) })
+            const user = await Users.findOne({ where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('email')), Sequelize.fn('lower', req.query.emial)) })
             res.send(user ? true : false)
         } catch (err) {
+            console.log('error check username: ', err)
             res.status(500).send(err)
         }
     },
     async checkUsernameNotTaken(req, res) {
         try {
-            const user = await Users.findOne({ where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('username')), sequelize.fn('lower', req.query.username)) })
+            const user = await Users.findOne({ where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('name')), Sequelize.fn('lower', req.query.username)) })
             res.send(user ? true : false)
         } catch (err) {
+            console.log('error check email: ', err)
             res.status(500).send(err)
         }
     },

@@ -3,6 +3,7 @@ const Brand = require('../models').brand
 const Gender = require('../models').gender
 const Type = require('../models').type
 const Size = require('../models').size
+const SneakerImage = require('../models').sneakerImage
 
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op
@@ -17,10 +18,11 @@ module.exports = {
         try {
             const brandId = req.body.brandId
             const typeId = req.body.typeId
-            const genderId = req.body.brandId
+            const genderId = req.body.genderId
             const sizes = req.body.sizes
             const sizeIds = []
             const images = req.body.images
+            const imageIds = []
 
             if (!brandId || typeof brandId !== 'number') throw { 'brand': 'brandId is required.' }
             if (!genderId || typeof genderId !== 'number') throw { 'gender': 'genderId is required.' }
@@ -46,7 +48,6 @@ module.exports = {
 
             const sneaker = await Sneaker.create({ 'name': req.body.name, 'brandId': brandId, 'typeId': typeId, 'genderId': genderId })
             const imgPathId = 'uploads/sneakers/' + sneaker.dataValues.id
-            const imagesPath = await sneaker.update({ 'images': imgPathId }, { fields: ['images'] })
             const dirExists = await fs.existsSync(imgPathId)
             if (!dirExists) {
                 await fs.mkdirSync(imgPathId);
@@ -58,14 +59,21 @@ module.exports = {
                 let newPath = './' + imgPathId + image.split('temp')[1]
                 fs.rename(image, newPath, (err) => {
                     if (err) throw err
-                    console.log('image rename complete')
+
+                    let imagePath = 'sneakers/' + sneaker.dataValues.id + image.split('temp')[1]
+                    SneakerImage.create({ 'path': imagePath, 'sneakerId': sneaker.dataValues.id }).then(imageId => {
+                        imageIds.push(imageId.dataValues.id)
+                        console.log('image rename complete')
+                    })
                 })
             }
 
             const associatedSizes = await sneaker.setSizes(sizeIds)
+            const associatedImages = await sneaker.setSneakerImages(imageIds)
 
             res.send(sneaker.get({ plain: true }))
         } catch (err) {
+            console.log('error create sneaker: ', err)
             res.status(500).send(err)
         }
     },
@@ -78,6 +86,7 @@ module.exports = {
                         { model: Brand, attributes: { exclude: ['createdAt', 'updatedAt'] } },
                         { model: Type, attributes: { exclude: ['createdAt', 'updatedAt'] } },
                         { model: Gender, attributes: { exclude: ['createdAt', 'updatedAt'] } },
+                        { model: SneakerImage, attributes: { exclude: ['createdAt', 'updatedAt'] } },
                         { model: Size, attributes: ['id', 'eu'], through: { attributes: [] } } // through: { attributes: [] } removes createdAt and updatedAt
                     ]
                 })
@@ -85,6 +94,23 @@ module.exports = {
             res.send(sneakers)
         } catch (err) {
             console.log('error: ', err)
+            res.status(500).send(err)
+        }
+    },
+    async getSneakerById(req, res) {
+        try {
+            const sneaker = await Sneaker.findById(req.query.id, {
+                attributes: { exclude: ['createdAt', 'updatedAt'] },
+                include: [
+                    { model: Brand, attributes: { exclude: ['createdAt', 'updatedAt'] } },
+                    { model: Type, attributes: { exclude: ['createdAt', 'updatedAt'] } },
+                    { model: Gender, attributes: { exclude: ['createdAt', 'updatedAt'] } },
+                    { model: SneakerImage, attributes: ['path'] },
+                    { model: Size, attributes: ['id', 'eu'], through: { attributes: [] } } // through: { attributes: [] } removes createdAt and updatedAt
+                ]
+            })
+            res.send(sneaker.get({ plain: true }))
+        } catch (err) {
             res.status(500).send(err)
         }
     },

@@ -67,6 +67,7 @@ module.exports = (app) => {
     app.post('/checkModelExists', sneakerController.checkModelExists)
     app.post('/sneaker', sneakerController.createSneaker)
     app.get('/sneaker', sneakerController.getSneakers)
+    app.get('/sneakerId', sneakerController.getSneakerById)
 
     app.get('/redirect', function (req, res) {
         res.send({
